@@ -92,9 +92,34 @@ impl Spell_Corrector {
         Err("Unable to find word \"".to_string() + &input_word + &"\"".to_string())
     }
 
-    fn delete_char(&mut self,word: String) -> Vec<String> {}
+    fn delete_char(&mut self,word: String) -> Vec<String> {
+        let mut words = Vec::new();
+        for i in 0..(word.chars().count()-1) {
+            let mut new_word = word;
+            new_word.drain(i..i+1);
+            
+            words.push(new_word);
+        }
+        words
+    }
 
-    fn transpose_char(&mut self,word: String) -> Vec<String> {}
+    fn transpose_char(&mut self,word: String) -> Vec<String> {
+    
+        let mut words = Vec::new();
+        for i in 0..(word.chars().count()-1) {
+            let char1 = word.chars().nth(i).unwrap();
+            for j in 1..(word.chars().count() -1) {
+                let char2 = word.chars().nth(j).unwrap();
+                let mut new_word = word;
+
+                new_word.replace_range(i..i+1, &char2.to_string());
+                new_word.replace_range(j..j+1, &char1.to_string());
+
+                words.push(new_word);
+            }
+        }
+        words
+    }
 
     fn alternate_char(&mut self,word: String) -> Vec<String> {}
 
