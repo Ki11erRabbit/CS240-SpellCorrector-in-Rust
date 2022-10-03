@@ -1,5 +1,4 @@
-mod Trie;
-
+mod Spell_Corrector;
 fn main() {
     println!("Hello, world!");
 
