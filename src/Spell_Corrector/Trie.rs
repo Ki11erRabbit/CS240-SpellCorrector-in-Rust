@@ -76,7 +76,7 @@ impl Trie {
         }
     }
 
-    pub fn find(&self, word: String) -> Result<Node,String> {
+    pub fn find(&self, word: &String) -> Result<Node,String> {
         let lower_word = word.as_str().to_lowercase();
         let mut curr_node = self.root.clone();
 
@@ -87,7 +87,7 @@ impl Trie {
                     *curr_node = *next_node.clone(); 
                 }
                 None => {
-                    return Err(word + &" not found".to_string());
+                    return Err(word.to_owned() + &" not found".to_string());
                 }
             }
         }
@@ -96,7 +96,7 @@ impl Trie {
             return Ok(*curr_node);
         }
 
-        return Err(word + &" not found".to_string());
+        return Err(word.to_owned() + &" not found".to_string());
     }
 
     pub fn get_word_count(&self) -> u32 {

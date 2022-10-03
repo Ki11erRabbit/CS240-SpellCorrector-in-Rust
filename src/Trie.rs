@@ -1,4 +1,4 @@
-pub struct Node {
+struct Node {
     data: char,
     freq: u32,
     children: Vec<Option<Box<Node>>>,
@@ -47,7 +47,7 @@ impl Default for Trie {
 }
 impl Trie {
     pub fn new() -> Self {
-        Default::default()
+        Self {root: Default::default(), num_nodes: 1, num_words: 0}
     }
     pub fn add(&mut self, word: String) {
         let lower_word = word.to_lowercase();
@@ -76,7 +76,7 @@ impl Trie {
         }
     }
 
-    pub fn find(&self, word: String) -> Result<Node,String> {
+    pub fn find(&self, word: &String) -> Result<Node,String> {
         let lower_word = word.as_str().to_lowercase();
         let mut curr_node = self.root.clone();
 
