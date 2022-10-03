@@ -104,7 +104,6 @@ impl Spell_Corrector {
     }
 
     fn transpose_char(&mut self,word: String) -> Vec<String> {
-    
         let mut words = Vec::new();
         for i in 0..(word.chars().count()-1) {
             let char1 = word.chars().nth(i).unwrap();
@@ -121,12 +120,64 @@ impl Spell_Corrector {
         words
     }
 
-    fn alternate_char(&mut self,word: String) -> Vec<String> {}
+    fn alternate_char(&mut self,word: String) -> Vec<String> {
+        let mut words = Vec::new();
+        for i in 0..(word.chars().count()-1) {
+            for c in 'a'..'z' {
+                let mut new_word = word;
+                
+                new_word.replace_range(i..i+1, &c.to_string());
 
-    fn insert_char(&mut self,word: String) -> Vec<String> {}
+                words.push(new_word);
+            }
+        }
+        words
+    }
 
-    fn gen_edit_dist1(&mut self, word: String) {}
+    fn insert_char(&mut self,word: String) -> Vec<String> {
+        let mut words = Vec::new();
+        for i in 0..(word.chars().count()) {
+            for c in 'a'..'z' {
+                let mut new_word = word;
 
-    fn gen_edit_dist2(&mut self, word: String) {}
+                new_word.replace_range(i..i+1, &c.to_string());
+
+                words.push(new_word);
+            }
+        }
+
+        words
+    }
+
+    fn gen_edit_dist1(&mut self, word: String) {
+        for new_word in self.delete_char(word) {
+            self.edit_dist1.insert(new_word);
+        }
+        for new_word in self.transpose_char(word) {
+            self.edit_dist1.insert(new_word);
+        }
+        for new_word in self.alternate_char(word) {
+            self.edit_dist1.insert(new_word);
+        }
+        for new_word in self.insert_char(word) {
+            self.edit_dist1.insert(new_word);
+        }
+    }
+
+    fn gen_edit_dist2(&mut self, word: String) {
+
+        for new_word in self.delete_char(word) {
+            self.edit_dist2.insert(new_word);
+        }
+        for new_word in self.transpose_char(word) {
+            self.edit_dist2.insert(new_word);
+        }
+        for new_word in self.alternate_char(word) {
+            self.edit_dist2.insert(new_word);
+        }
+        for new_word in self.insert_char(word) {
+            self.edit_dist2.insert(new_word);
+        }
+    }
     
 }
