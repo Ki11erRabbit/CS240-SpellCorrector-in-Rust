@@ -42,7 +42,7 @@ impl SpellCorrector {
         println!("Finding Matches in Edit Distance 1");
         let mut matches = Vec::new();
         for word in edit_dist1.iter() {
-            match self.dictionary.find(&word.to_string()) {
+            match self.dictionary.find(&word) {
                 Err(_x) => {},
                 Ok(_v) => matches.push(word)
             }
@@ -52,9 +52,9 @@ impl SpellCorrector {
         println!("finding Highest Freq in matches");
         for matched_word in matches.iter() {
             let pair;
-            match self.dictionary.find(&matched_word.to_string()) {
+            match self.dictionary.find(&matched_word) {
                 Err(_x) => continue,
-                Ok(node) => pair = (Some(matched_word.to_string().clone()), node.get_freq())
+                Ok(node) => pair = (Some(matched_word.to_string()), node.get_freq())
             }
 
             if output.0 < pair.0 {
@@ -74,9 +74,9 @@ impl SpellCorrector {
         println!("Finding Matches in Edit Distance 2");
         for word in edit_dist2.iter() {
             //println!("{}",word);
-            match self.dictionary.find(&word.to_string()) {
+            match self.dictionary.find(&word) {
                 Err(_x) => {},
-                Ok(_v) => matches2.push(word.to_string())
+                Ok(_v) => matches2.push(word)
             }
         }
         
@@ -85,9 +85,9 @@ impl SpellCorrector {
         
         for matched_word in matches2.iter() {
             let pair;
-            match self.dictionary.find(&matched_word.to_string()) {
+            match self.dictionary.find(&matched_word) {
                 Err(_x) => continue,
-                Ok(node) => pair = (Some(matched_word.to_string().clone()), node.get_freq())
+                Ok(node) => pair = (Some(matched_word.to_string()), node.get_freq())
             }
 
             if output.0 < pair.0 {
@@ -95,7 +95,7 @@ impl SpellCorrector {
             }
             
         }
-        
+       
         //println!("{:?}", matches); 
         if output.0.is_some() {
             return Ok(output.0.unwrap().to_string());
@@ -104,11 +104,11 @@ impl SpellCorrector {
         Err("Unable to find word \"".to_string() + &input_word + &"\"".to_string())
     }
 
-    fn delete_char(&mut self,word: & String) -> Vec<String> {
+    fn delete_char(&mut self,word: & String) -> Vec<Box<String>> {
         let mut words = Vec::new();
         //println!("length of word {}",word.chars().count());
         for i in 0..(word.chars().count()-1) {
-            let mut new_word = word.clone();
+            let mut new_word = Box::new(word.clone());
             new_word.drain(i..i+1);
             
             words.push(new_word);
@@ -116,7 +116,7 @@ impl SpellCorrector {
         words
     }
 
-    fn transpose_char(&mut self,word: &String) -> Vec<String> {
+    fn transpose_char(&mut self,word: &String) -> Vec<Box<String>> {
         let mut words = Vec::new();
         for i in 0..(word.chars().count()-1) {
             let char1 = word.chars().nth(i).unwrap();
@@ -126,7 +126,7 @@ impl SpellCorrector {
                     continue;
                 }
                 //println!("{} {}",char1.to_string(), char2.to_string());
-                let mut new_word = word.clone();
+                let mut new_word = Box::new(word.clone());
 
                 new_word.replace_range(i..i+1, &char2.to_string());
                 new_word.replace_range(j..j+1, &char1.to_string());
@@ -137,11 +137,11 @@ impl SpellCorrector {
         words
     }
 
-    fn alternate_char(&mut self,word: &String) -> Vec<String> {
+    fn alternate_char(&mut self,word: &String) -> Vec<Box<String>> {
         let mut words = Vec::new();
         for i in 0..(word.chars().count()-1) {
             for c in 'a'..'z' {
-                let mut new_word = word.clone();
+                let mut new_word = Box::new(word.clone());
                 
                 new_word.replace_range(i..i+1, &c.to_string());
 
@@ -151,11 +151,11 @@ impl SpellCorrector {
         words
     }
 
-    fn insert_char(&mut self,word: &String) -> Vec<String> {
+    fn insert_char(&mut self,word: &String) -> Vec<Box<String>> {
         let mut words = Vec::new();
         for i in 0..(word.chars().count()) {
             for c in 'a'..'z' {
-                let mut new_word = word.clone();
+                let mut new_word = Box::new(word.clone());
 
                 new_word.replace_range(i..i+1, &c.to_string());
 
@@ -166,7 +166,7 @@ impl SpellCorrector {
         words
     }
 
-    fn gen_edit_dist1(&mut self, word: String) -> HashSet<String> {
+    fn gen_edit_dist1(&mut self, word: String) -> HashSet<Box<String>> {
         let mut edit_dist1 = HashSet::new();
         edit_dist1.extend(self.delete_char(&word));
         edit_dist1.extend(self.transpose_char(&word));
@@ -190,7 +190,7 @@ impl SpellCorrector {
         edit_dist1
     }
 
-    fn gen_edit_dist2(&mut self, words: &HashSet<String>) -> HashSet<String> {
+    fn gen_edit_dist2(&mut self, words: &HashSet<Box<String>>) -> HashSet<Box<String>> {
 
         let mut edit_dist2 = HashSet::new();
         for word in words.iter() {
