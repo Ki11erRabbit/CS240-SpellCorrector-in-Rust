@@ -104,20 +104,17 @@ impl SpellCorrector {
         Err("Unable to find word \"".to_string() + &input_word + &"\"".to_string())
     }
 
-    fn delete_char(&mut self,word: & String) -> Vec<Box<String>> {
-        let mut words = Vec::new();
+    fn delete_char(&mut self,words: &mut HashSet<String> , word: & String) {
         //println!("length of word {}",word.chars().count());
         for i in 0..(word.chars().count()-1) {
-            let mut new_word = Box::new(word.clone());
+            let mut new_word = word.clone();
             new_word.drain(i..i+1);
             
-            words.push(new_word);
+            words.insert(new_word);
         }
-        words
     }
 
-    fn transpose_char(&mut self,word: &String) -> Vec<Box<String>> {
-        let mut words = Vec::new();
+    fn transpose_char(&mut self,words: &mut HashSet<String> ,word: &String) {
         for i in 0..(word.chars().count()-1) {
             let char1 = word.chars().nth(i).unwrap();
             for j in 1..(word.chars().count() -1) {
@@ -126,52 +123,47 @@ impl SpellCorrector {
                     continue;
                 }
                 //println!("{} {}",char1.to_string(), char2.to_string());
-                let mut new_word = Box::new(word.clone());
+                let mut new_word = word.clone();
 
                 new_word.replace_range(i..i+1, &char2.to_string());
                 new_word.replace_range(j..j+1, &char1.to_string());
                 //println!("\t{} {}",word,new_word);
-                words.push(new_word);
+                words.ins(new_word);
             }
         }
-        words
     }
 
-    fn alternate_char(&mut self,word: &String) -> Vec<Box<String>> {
-        let mut words = Vec::new();
+    fn alternate_char(&mut self,words: &mut HashSet<String> ,word: &String) {
         for i in 0..(word.chars().count()-1) {
             for c in 'a'..'z' {
-                let mut new_word = Box::new(word.clone());
+                let mut new_word = word.clone();
                 
                 new_word.replace_range(i..i+1, &c.to_string());
 
-                words.push(new_word);
+                words.insert(new_word);
             }
         }
-        words
     }
 
-    fn insert_char(&mut self,word: &String) -> Vec<Box<String>> {
-        let mut words = Vec::new();
+    fn insert_char(&mut self,words: &mut HashSet<String> ,word: &String) {
         for i in 0..(word.chars().count()) {
             for c in 'a'..'z' {
-                let mut new_word = Box::new(word.clone());
+                let mut new_word = word.clone();
 
                 new_word.replace_range(i..i+1, &c.to_string());
 
-                words.push(new_word);
+                words.insert(new_word);
             }
         }
 
-        words
     }
 
-    fn gen_edit_dist1(&mut self, word: String) -> HashSet<Box<String>> {
+    fn gen_edit_dist1(&mut self, word: String) -> HashSet<String> {
         let mut edit_dist1 = HashSet::new();
-        edit_dist1.extend(self.delete_char(&word));
-        edit_dist1.extend(self.transpose_char(&word));
-        edit_dist1.extend(self.alternate_char(&word));
-        edit_dist1.extend(self.insert_char(&word));
+        self.delete_char(&mut edit_dist1, &word);
+        self.transpose_char(&mut edit_dist1, &word);
+        self.alternate_char(&mut edit_dist1, &word);
+        self.insert_char(&mut edit_dist1, &word);
 
 
 /*
@@ -190,14 +182,14 @@ impl SpellCorrector {
         edit_dist1
     }
 
-    fn gen_edit_dist2(&mut self, words: &HashSet<Box<String>>) -> HashSet<Box<String>> {
+    fn gen_edit_dist2(&mut self, words: &HashSet<String>) -> HashSet<String> {
 
         let mut edit_dist2 = HashSet::new();
         for word in words.iter() {
-            edit_dist2.extend(self.delete_char(&word));
-            edit_dist2.extend(self.transpose_char(&word));
-            edit_dist2.extend(self.alternate_char(&word));
-            edit_dist2.extend(self.insert_char(&word));
+            self.delete_char(&mut edit_dist2, &word);
+            self.transpose_char(&mut edit_dist2, &word);
+            self.alternate_char(&mut edit_dist2, &word);
+            self.insert_char(&mut edit_dist2, &word);
         }
         /*for word in words.iter() {
             for new_word in self.delete_char(&word) {
