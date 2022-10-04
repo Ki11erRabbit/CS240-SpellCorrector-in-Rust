@@ -3,7 +3,6 @@ mod Spell_Corrector;
 use std::env;
 
 fn main() {
-    println!("Hello, world!");
 
 
     /*let mut dictionary = Trie::Trie::new();
