@@ -76,15 +76,15 @@ impl Trie {
         }
     }
 
-    pub fn find(&self, word: &String) -> Result<Node,String> {
+    pub fn find(&mut self, word: &String) -> Result<&Node,String> {
         let lower_word = word.as_str().to_lowercase();
-        let mut curr_node = self.root.clone();
+        let mut curr_node = &mut self.root;
 
         for letter in lower_word.chars() {
             let index :usize = letter.to_digit(36).unwrap() as usize - 10;
-            match &curr_node.get_children()[index] {
+            match &mut curr_node.get_children()[index] {
                 Some(next_node) => {
-                    *curr_node = *next_node.clone(); 
+                    curr_node =  next_node; 
                 }
                 None => {
                     return Err(word.to_owned() + &" not found".to_string());
@@ -93,7 +93,7 @@ impl Trie {
         }
 
         if curr_node.get_freq() >= 1 {
-            return Ok(*curr_node);
+            return Ok(&*curr_node);
         }
 
         return Err(word.to_owned() + &" not found".to_string());
