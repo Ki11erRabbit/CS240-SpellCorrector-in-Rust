@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Node {
     data: char,
     freq: u32,
@@ -34,6 +35,7 @@ impl Clone for Node {
     }
 }
 
+#[derive(Debug)]
 pub struct Trie {
     root: Box<Node>,
     num_nodes: u32,
@@ -49,7 +51,7 @@ impl Trie {
     pub fn new() -> Self {
         Self {root: Default::default(), num_nodes: 1, num_words: 0}
     }
-    pub fn add(&mut self, word: String) {
+    pub fn add(&mut self, word: &String) {
         let lower_word = word.to_lowercase();
         let mut curr_node = &mut self.root;// self.root;
        
@@ -76,7 +78,7 @@ impl Trie {
         }
     }
 
-    pub fn find(&mut self, word: &String) -> Result<&Node,String> {
+    pub fn find(&mut self, word: &String) -> Option<&Node> {
         let lower_word = word.as_str().to_lowercase();
         let mut curr_node = &mut self.root;
 
@@ -87,16 +89,16 @@ impl Trie {
                     curr_node =  next_node; 
                 }
                 None => {
-                    return Err(word.to_owned() + &" not found".to_string());
+                    return None;
                 }
             }
         }
 
         if curr_node.get_freq() >= 1 {
-            return Ok(&*curr_node);
+            return Some(&*curr_node);
         }
 
-        return Err(word.to_owned() + &" not found".to_string());
+        return None;
     }
 
     pub fn get_word_count(&self) -> u32 {
@@ -179,3 +181,292 @@ impl PartialEq for Trie {
         Trie::compare(*self.root.clone(), *other.root.clone())
     }
 }
+
+
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use std::fs;
+   
+    
+    fn setup() -> (Trie, Trie) {
+        let trie1 = Trie::new();
+        let trie2 = Trie::new();
+
+        return (trie1,trie2);
+    }
+
+    #[test]
+    fn test_single_word() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        
+        assert_eq!(trie1.get_word_count(), 0, "Incorrect word count on empty trie.");
+        trie1.add(&"cares".to_string());
+        assert_ne!(trie1.find(&"cares".to_string()).is_none(),true, "First word added wasn't found (\"cares\")");
+        assert_eq!(6, trie1.get_node_count(), "Incorrect node count after 1 add");
+        assert_eq!(1, trie1.get_word_count(), "Incorrect word count after 1 add");
+    }
+
+    #[test]
+    fn test_two_words() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        assert_ne!(trie1.find(&"caress".to_string()).is_none(),true, "Second word added wasn't found (\"caress\")");
+        assert_eq!(7, trie1.get_node_count(), "Incorrect node count after second add");
+        assert_eq!(2, trie1.get_word_count(), "Incorrect word count after 2 adds");
+    }
+
+    #[test]
+    fn test_new_path() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+        assert_ne!(trie1.find(&"baboon".to_string()).is_none(),true, "New word added not found (\"baboon\")");
+        assert_eq!(13, trie1.get_node_count(), "Incorrect node count after adding completely new word");
+        assert_eq!(3, trie1.get_word_count(), "Incorrect word count after 3 adds");
+    }
+
+    #[test]
+    fn test_prefix() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+        trie1.add(&"car".to_string());
+        assert_ne!(trie1.find(&"car".to_string()).is_none(),true, "Prefix of first word not found (\"car\")");
+        assert_eq!(13, trie1.get_node_count(), "Incorrect node count after adding no new nodes");
+        assert_eq!(4, trie1.get_word_count(), "Incorrect word count after 4 adds");
+    }
+
+    #[test]
+    fn test_equals() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        let trie2 = &mut pair.1;
+        
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+
+        trie2.add(&"cares".to_string());
+        trie2.add(&"caress".to_string());
+        trie2.add(&"baboon".to_string());
+
+        trie1.add(&"car".to_string());
+        assert_eq!(trie1,trie1, "Trie found not equal to itself");
+        assert_ne!(trie2, trie1, "Unequal Trie objects found equal (trie1 has word \"car\", where other trie doesn't)");
+        
+        trie2.add(&"car".to_string());
+
+        assert_eq!(trie2, trie1, "Equal Trie objects found unequal");
+        assert_eq!(trie2 == trie1, trie1 == trie2, "Trie's == operator is not commutative");
+
+        trie2.add(&"car".to_string());
+
+        assert_ne!(trie2, trie1, "Unequal trie objects found equal (both have word \"car\", but word frequency is different)");
+    }
+
+    #[test]
+    fn test_more_equals() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        let trie2 = &mut pair.1;
+        
+        assert_eq!(trie2, trie1, "Two empty tries not found equal");
+
+        for c in 'a'..='z' {
+            trie1.add(&c.to_string());
+        }
+        
+        assert_ne!(trie1, trie2, "One empty trie found equal to un-empty trie.");
+        assert_ne!(trie2,trie1,"One empty trie found equal to un-empty trie.");
+        
+        for c in 'a'..='z' {
+            trie2.add(&c.to_string());
+        }
+
+        assert_eq!(trie2,trie1,"Tries with a-z on root found unequal");
+
+        trie1.add(&"jack".to_string());
+        trie1.add(&"jackson".to_string());
+        trie1.add(&"jackblack".to_string());
+        trie1.add(&"janitor".to_string());
+        trie2.add(&"jack".to_string());
+        trie2.add(&"jackson".to_string());
+        trie2.add(&"jackblack".to_string());
+        trie2.add(&"janitor".to_string());
+
+        assert_eq!(trie2,trie1, "Two equal branching tries found un-equal");
+
+        trie1.add(&"jackblanco".to_string());
+
+        assert_ne!(trie1,trie2, "Two un-equal branching tries found equal.");
+        assert_ne!(trie2,trie1, "Two un-equal branching tries found equal.");
+    }
+
+    #[test]
+    fn test_duplicate_nodes() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        
+
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+        trie1.add(&"car".to_string());
+        trie1.add(&"car".to_string());
+
+        
+        assert_eq!(13, trie1.get_node_count(), "Incorrect node count after duplicate nodes");
+        assert_eq!(4, trie1.get_word_count(), "Incorrect word count after duplicate adds");
+    }
+
+    #[test]
+    fn test_find() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        
+
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+        trie1.add(&"car".to_string());
+        trie1.add(&"car".to_string());
+
+        assert_eq!(trie1.find(&"vnjklnasldkgnmb".to_string()).is_none(), true, "Found nonsense word (should have returned None)");
+        assert_eq!(trie1.find(&"caresses".to_string()).is_none(), true, "Found \"caresses\" (chould have returned None)");
+        assert_eq!(trie1.find(&'c'.to_string()).is_none(), true, "Found first letter of first word (chould have returned None)");
+        assert_eq!(trie1.find(&"ca".to_string()).is_none(), true, "Found \"ca\" (prefix of first word) (chould have returned None)");
+        assert_eq!(trie1.find(&"care".to_string()).is_none(), true, "Found \"care\" (prefix of first word) (chould have returned None)");
+    }
+
+    #[test]
+    fn test_hash_code() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        let trie2 = &mut pair.1;
+        
+
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+        trie1.add(&"car".to_string());
+        trie1.add(&"car".to_string());
+
+        trie2.add(&"cares".to_string());
+        trie2.add(&"caress".to_string());
+        trie2.add(&"baboon".to_string());
+        trie2.add(&"car".to_string());
+        trie2.add(&"car".to_string());
+
+        assert_eq!(trie1.hash_code(), trie1.hash_code(), "Same Trie does not return the same hash code");
+        assert_eq!(trie2.hash_code(), trie1.hash_code(), "Equal Trie object return uneqaul hash codes");
+    }
+
+    #[test]
+    fn test_more_hash_code() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        let trie2 = &mut pair.1;
+        
+
+        trie1.add(&"dat".to_string());
+        trie2.add(&"far".to_string());
+        assert_ne!(trie2.hash_code(), trie1.hash_code(), "The hash code is too simple. Different Tries return same hash code");
+
+
+        trie2.add(&"dat".to_string());
+        trie1.add(&"far".to_string());
+        assert_eq!(trie2.hash_code(),trie1.hash_code(), "Equal Tries of different construction history return different hash code");
+
+        trie2.add(&"da".to_string());
+        assert_ne!(trie2.hash_code(),trie1.hash_code(), "Tries of differing word cound return same hash code.");
+
+        trie1.add(&"date".to_string());
+        assert_ne!(trie2.hash_code(), trie1.hash_code(), "Tries of differing node count return same hash code");
+        
+        trie1.add(&"d".to_string());
+        assert_ne!(trie2.hash_code(), trie1.hash_code(), "Different tries of same node count and word count return same hash code");
+    }
+
+    #[test]
+    fn test_to_string() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        let trie2 = &mut pair.1;
+        
+        const TRIE_STRING :&str = "baboon\ncar\ncares\ncaress";
+        const WRONG_TRIE_STRING :&str = "baboon\ncar\ncar\ncares\ncaress";
+
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+        trie1.add(&"car".to_string());
+        trie1.add(&"car".to_string());
+
+        trie2.add(&"cares".to_string());
+        trie2.add(&"caress".to_string());
+        trie2.add(&"baboon".to_string());
+        trie2.add(&"car".to_string());
+        trie2.add(&"car".to_string());
+        
+        assert_ne!(trie1.to_string().to_lowercase() == WRONG_TRIE_STRING || 
+                   trie1.to_string().to_lowercase() == WRONG_TRIE_STRING.to_owned() + "\n", true, 
+                   "Trie to_string() method has wrong count for (\"car\")");
+        
+        assert_eq!(trie1.to_string().to_lowercase() == TRIE_STRING || 
+                   trie1.to_string().to_lowercase() == TRIE_STRING.to_owned() + "\n", true, 
+                   "Trie to_string() method returns incorrect String\n\n");
+        assert_eq!(trie1.to_string().to_lowercase() == trie2.to_string().to_lowercase(),true, "Equal Trie objects' to_string() methods return different Strings");
+    }
+
+    #[test]
+    fn test_large_trie() {
+        let mut pair = setup();
+        let trie1 = &mut pair.0;
+        let trie2 = &mut pair.1;
+        
+        const FILENAME :&str = "notsobig.txt";
+        
+        trie1.add(&"cares".to_string());
+        trie1.add(&"caress".to_string());
+        trie1.add(&"baboon".to_string());
+        trie1.add(&"car".to_string());
+        trie1.add(&"car".to_string());
+
+        trie2.add(&"cares".to_string());
+        trie2.add(&"caress".to_string());
+        trie2.add(&"baboon".to_string());
+        trie2.add(&"car".to_string());
+        trie2.add(&"car".to_string());
+         
+        let file = fs::read_to_string(FILENAME);
+
+        for line in file.expect("Unable to find dictionary").lines() {
+            
+            for word in line.split(' ') {
+                let mut lower_word = word.to_lowercase();
+                lower_word = lower_word.trim_end().to_string();
+                trie1.add(&lower_word);
+                trie2.add(&lower_word);
+            }    
+        }
+        
+        assert_eq!(78891,trie1.get_node_count(), "Incorrect node count after million+ word add (including many duplicates)");
+        assert_eq!(trie2.get_node_count(),trie1.get_node_count(), "Equal Trie objects found unequal during million+ word add (including many duplicates)");
+        assert_eq!(29157,trie1.get_word_count(), "Incorrect word count after many adds");
+    }
+}
+

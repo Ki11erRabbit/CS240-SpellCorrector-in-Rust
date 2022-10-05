@@ -15,6 +15,7 @@ impl SpellCorrector {
         Self {dictionary: Trie::Trie::new()}
     }
     pub fn use_dictionary(&mut self, dictionary_file_name: String) {
+        self.dictionary = Trie::Trie::new();
         let file = fs::read_to_string(dictionary_file_name);
         
         for line in file.expect("Unable to find dictionary").lines() {
@@ -22,7 +23,7 @@ impl SpellCorrector {
             for word in line.split(' ') {
                 let mut lower_word = word.to_lowercase();
                 lower_word = lower_word.trim_end().to_string();
-                self.dictionary.add(lower_word.to_string());
+                self.dictionary.add(&lower_word.to_string());
             }
             
         }
@@ -32,8 +33,8 @@ impl SpellCorrector {
         let lower_word = input_word.to_lowercase();
 
         match self.dictionary.find(&lower_word) {
-            Err(_x) => {},
-            Ok(_v) => return Ok(input_word)
+            None => {},
+            Some(_v) => return Ok(lower_word)
         }
 
         let mut edit_dist1 : HashSet<Box<String>> = HashSet::new();
@@ -44,8 +45,8 @@ impl SpellCorrector {
         let mut matches = Vec::new();
         for word in edit_dist1.iter() {
             match self.dictionary.find(&word) {
-                Err(_x) => {},
-                Ok(_v) => matches.push(word)
+                None => {},
+                Some(_v) => matches.push(word)
             }
         }
 
@@ -54,11 +55,11 @@ impl SpellCorrector {
         for matched_word in matches.iter() {
             let pair;
             match self.dictionary.find(&matched_word) {
-                Err(_x) => continue,
-                Ok(node) => pair = (Some(matched_word.to_string()), node.get_freq())
+                None => continue,
+                Some(node) => pair = (Some(matched_word.to_string()), node.get_freq())
             }
 
-            if output.0 < pair.0 {
+            if output.1 < pair.1 {
                 output = pair;
             }
             
@@ -77,8 +78,8 @@ impl SpellCorrector {
         for word in edit_dist2.iter() {
             //println!("{}",word);
             match self.dictionary.find(&word) {
-                Err(_x) => {},
-                Ok(_v) => matches2.push(word)
+                None => {},
+                Some(_v) => matches2.push(word)
             }
         }
         
@@ -88,11 +89,11 @@ impl SpellCorrector {
         for matched_word in matches2.iter() {
             let pair;
             match self.dictionary.find(&matched_word) {
-                Err(_x) => continue,
-                Ok(node) => pair = (Some(matched_word.to_string()), node.get_freq())
+                None => continue,
+                Some(node) => pair = (Some(matched_word.to_string()), node.get_freq())
             }
 
-            if output.0 < pair.0 {
+            if output.1 < pair.1 {
                 output = pair;
             }
             
@@ -204,6 +205,451 @@ impl SpellCorrector {
                 edit_dist2.insert(new_word);
             }
         }*/
+    }
+    
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    const WORD_FILENAME :&str = "word.txt";
+    const WORDS_FILENAME :&str = "words.txt";
+    const BIG_FILENAME :&str = "notsobig.txt";
+    const WORD :&str = "yea";
+
+    fn setup() -> SpellCorrector {
+        return SpellCorrector::new();
+    }
+
+    fn test(filename: &str, word: &str, corrector: &mut SpellCorrector) -> Option<String> {
+        let suggestion;
+
+        corrector.use_dictionary(filename.to_string());
+
+        suggestion = corrector.suggest_similar_word(word.to_string());
+
+        match suggestion {
+            Ok(word) => return Some(word),
+            Err(v) => return None,
+        }
+    }
+
+    fn create_error_message(guess: &str, expected: &str, suggested: &String) -> String {
+        return format!("Guessed: {} Expected: {} Actual: {}",guess,expected,suggested);
+    }
+
+    #[test]
+    fn test_valid_word() {
+        let mut corrector = setup();
+       
+        let suggested_word = test(WORD_FILENAME, WORD, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "Same spelling of expected word.");
+        
+        let suggested_word = test(WORD_FILENAME, &WORD.to_lowercase(), &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "Lower case of expected word.");
+        
+        let suggested_word = test(WORD_FILENAME, &WORD.to_uppercase(), &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "Upper case of expected word.");
+        
+        let suggested_word = test(WORD_FILENAME, WORD, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "Same spelling of expected word.");
+    }
+
+    #[test]
+    fn test_insertion() {
+        let mut corrector = setup();
+
+        let guess: &str = "ye"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ea"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ya"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn test_deletion() {
+        let mut corrector = setup();
+
+        let guess: &str = "yaea"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ybea"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ryea"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ygea"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn test_alteration() {
+        let mut corrector = setup();
+
+        let guess: &str = "flobt"; 
+        let suggested_word = test(WORDS_FILENAME, guess, &mut corrector);
+        assert_eq!("float",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "float",&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "bloat"; 
+        let suggested_word = test(WORDS_FILENAME, guess, &mut corrector);
+        assert_eq!("float",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "float",&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "reah"; 
+        let suggested_word = test(WORDS_FILENAME, guess, &mut corrector);
+        assert_eq!("yeah",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "yeah",&suggested_word.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn test_transposition() {
+        let mut corrector = setup();
+
+        let guess: &str = "yaeh"; 
+        let suggested_word = test(WORDS_FILENAME, guess, &mut corrector);
+        assert_eq!("yeah",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "yeah",&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "flaot"; 
+        let suggested_word = test(WORDS_FILENAME, guess, &mut corrector);
+        assert_eq!("float",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "float",&suggested_word.as_ref().unwrap()));    
+    }
+
+    #[test]
+    fn test_insertion_insertion() {
+        let mut corrector = setup();
+
+        let guess: &str = "e"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "a"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "y"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+    
+    #[test]
+    fn test_insertion_deletion() {
+        let mut corrector = setup();
+
+        let guess: &str = "yez"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "efa"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "rya"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+    
+    #[test]
+    fn test_insertion_alteration() {
+        let mut corrector = setup();
+
+        let guess: &str = "er"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "qa"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yf"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+    
+    #[test]
+    fn test_insertion_transposition() {
+        let mut corrector = setup();
+
+        let guess: &str = "ae"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ey"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+    
+    #[test]
+    fn test_deletion_insertion() {
+        let mut corrector = setup();
+
+        let guess: &str = "yar"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "fya"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yad"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+     
+    #[test]
+    fn test_deletion_deletion() {
+        let mut corrector = setup();
+
+        let guess: &str = "yeakg"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "jkyea"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "vyfea"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "cyean"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+    
+    #[test]
+    fn test_deletion_alteration() {
+        let mut corrector = setup();
+
+        let guess: &str = "ydef"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "vyga"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ymca"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+    
+    #[test]
+    fn test_deletion_transposition() {
+        let mut corrector = setup();
+
+        let guess: &str = "yade"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "epya"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yame"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+    
+    #[test]
+    fn test_alteration_insertion() {
+        let mut corrector = setup();
+
+        let guess: &str = "fe"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "va"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yy"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+     
+    #[test]
+    fn test_alteration_deletion() {
+        let mut corrector = setup();
+
+        let guess: &str = "feia"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yqex"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yqax"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+      
+    #[test]
+    fn test_alteration_alteration() {
+        let mut corrector = setup();
+
+        let guess: &str = "vda"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "xel"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yhb"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+      
+    #[test]
+    fn test_alteration_transposition() {
+        let mut corrector = setup();
+
+        let guess: &str = "yac"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "gya"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "eja"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+     
+    #[test]
+    fn test_transposition_insertion() {
+        let mut corrector = setup();
+
+        let guess: &str = "ay"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ae"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "ey"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+     
+    #[test]
+    fn test_transposition_deletion() {
+        let mut corrector = setup();
+
+        let guess: &str = "ycae"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "eyae"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "eyma"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+     
+    #[test]
+    fn test_transposition_alteration() {
+        let mut corrector = setup();
+
+        let guess: &str = "yac"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "bya"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "yle"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+    }
+     
+    #[test]
+    fn test_transposition_transposition() {
+        let mut corrector = setup();
+
+        let guess: &str = "eay"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "aye"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert_eq!(WORD,suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, WORD,&suggested_word.as_ref().unwrap()));    
+    }
+    
+    #[test]
+    fn test_no_similar_words() {
+        let mut corrector = setup();
+
+        let guess: &str = ""; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert!(suggested_word.is_none(), "Guessed empty String");
+        
+        let guess: &str = "lol"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert!(suggested_word.is_none(), "Guessed dissimilar string of same length");
+        
+        let guess: &str = "abcdefghijklmnopqrstuvqxyz"; 
+        let suggested_word = test(WORD_FILENAME, guess, &mut corrector);
+        assert!(suggested_word.is_none(), "Guessed dissimilar string of much longer length");
+    }
+     
+    #[test]
+    fn test_choose_closest_word() {
+        let mut corrector = setup();
+
+        let suggested_word = test(WORDS_FILENAME, "ye", &mut corrector);
+        assert_eq!("yea",suggested_word.as_ref().unwrap(), "Choosing edit distance one before two");
+        
+        let suggested_word = test(WORDS_FILENAME, "yes", &mut corrector);
+        assert_eq!("yea",suggested_word.as_ref().unwrap(), "Choosing edit distance one before two");    
+        
+        let suggested_word = test(WORDS_FILENAME, "yeaz", &mut corrector);
+        assert_eq!("yeah",suggested_word.as_ref().unwrap(), "Choosing word with higher frequency");
+        
+        let suggested_word = test(WORDS_FILENAME, "yeahj", &mut corrector);
+        assert_eq!("yeah",suggested_word.as_ref().unwrap(), "Choosing first word alphabetically when equal frequency");    
+    }
+     
+    #[test]
+    fn test_big_file() {
+        let mut corrector = setup();
+
+        let guess: &str = "Jason"; 
+        let suggested_word = test(BIG_FILENAME, guess, &mut corrector);
+        assert_eq!("jason",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "jason",&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "is"; 
+        let suggested_word = test(BIG_FILENAME, guess, &mut corrector);
+        assert_eq!("is",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "is",&suggested_word.as_ref().unwrap()));    
+
+        let guess: &str = "zupem"; 
+        let suggested_word = test(BIG_FILENAME, guess, &mut corrector);
+        assert_eq!("super",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "super",&suggested_word.as_ref().unwrap()));
+        
+        let guess: &str = "cooool"; 
+        let suggested_word = test(BIG_FILENAME, guess, &mut corrector);
+        assert_eq!("cool",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "cool",&suggested_word.as_ref().unwrap()));    
+        
+        let guess: &str = "absolustly"; 
+        let suggested_word = test(BIG_FILENAME, guess, &mut corrector);
+        assert_eq!("absolutely",suggested_word.as_ref().unwrap(), "{}", create_error_message(guess, "absolutely",&suggested_word.as_ref().unwrap()));    
     }
     
 }
