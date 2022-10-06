@@ -206,7 +206,7 @@ mod tests {
         
         assert_eq!(trie1.get_word_count(), 0, "Incorrect word count on empty trie.");
         trie1.add(&"cares".to_string());
-        assert_ne!(trie1.find(&"cares".to_string()).is_none(),true, "First word added wasn't found (\"cares\")");
+        assert!(trie1.find(&"cares".to_string()).is_some(), "First word added wasn't found (\"cares\")");
         assert_eq!(6, trie1.get_node_count(), "Incorrect node count after 1 add");
         assert_eq!(1, trie1.get_word_count(), "Incorrect word count after 1 add");
     }
@@ -218,7 +218,7 @@ mod tests {
         
         trie1.add(&"cares".to_string());
         trie1.add(&"caress".to_string());
-        assert_ne!(trie1.find(&"caress".to_string()).is_none(),true, "Second word added wasn't found (\"caress\")");
+        assert!(trie1.find(&"caress".to_string()).is_some(), "Second word added wasn't found (\"caress\")");
         assert_eq!(7, trie1.get_node_count(), "Incorrect node count after second add");
         assert_eq!(2, trie1.get_word_count(), "Incorrect word count after 2 adds");
     }
@@ -231,7 +231,7 @@ mod tests {
         trie1.add(&"cares".to_string());
         trie1.add(&"caress".to_string());
         trie1.add(&"baboon".to_string());
-        assert_ne!(trie1.find(&"baboon".to_string()).is_none(),true, "New word added not found (\"baboon\")");
+        assert!(trie1.find(&"baboon".to_string()).is_some(), "New word added not found (\"baboon\")");
         assert_eq!(13, trie1.get_node_count(), "Incorrect node count after adding completely new word");
         assert_eq!(3, trie1.get_word_count(), "Incorrect word count after 3 adds");
     }
@@ -245,7 +245,7 @@ mod tests {
         trie1.add(&"caress".to_string());
         trie1.add(&"baboon".to_string());
         trie1.add(&"car".to_string());
-        assert_ne!(trie1.find(&"car".to_string()).is_none(),true, "Prefix of first word not found (\"car\")");
+        assert!(trie1.find(&"car".to_string()).is_some(), "Prefix of first word not found (\"car\")");
         assert_eq!(13, trie1.get_node_count(), "Incorrect node count after adding no new nodes");
         assert_eq!(4, trie1.get_word_count(), "Incorrect word count after 4 adds");
     }

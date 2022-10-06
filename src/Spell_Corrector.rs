@@ -62,6 +62,12 @@ impl SpellCorrector {
             if output.1 < pair.1 {
                 output = pair;
             }
+            else if output.1 == pair.1 {
+                if output.0 > pair.0 {
+                    output = pair;
+                }
+            }
+
             
         }
         //println!("{:?}", matches); 
@@ -95,6 +101,11 @@ impl SpellCorrector {
 
             if output.1 < pair.1 {
                 output = pair;
+            }
+            else if output.1 == pair.1 {
+                if output.0 > pair.0 {
+                    output = pair;
+                }
             }
             
         }
@@ -624,6 +635,7 @@ mod tests {
         assert_eq!("yeah",suggested_word.as_ref().unwrap(), "Choosing word with higher frequency");
         
         let suggested_word = test(WORDS_FILENAME, "yeahj", &mut corrector);
+        println!("{:?}",corrector.dictionary);
         assert_eq!("yeah",suggested_word.as_ref().unwrap(), "Choosing first word alphabetically when equal frequency");    
     }
      
