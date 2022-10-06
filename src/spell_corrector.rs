@@ -1,4 +1,4 @@
-mod Trie;
+mod trie;
 
 
 use std::fs;
@@ -6,16 +6,16 @@ use std::fs;
 use std::collections::HashSet;
 
 pub struct SpellCorrector {
-    dictionary: Trie::Trie,
+    dictionary: trie::Trie,
 }
 
 impl SpellCorrector {
 
     pub fn new() -> Self {
-        Self {dictionary: Trie::Trie::new()}
+        Self {dictionary: trie::Trie::new()}
     }
     pub fn use_dictionary(&mut self, dictionary_file_name: String) {
-        self.dictionary = Trie::Trie::new();
+        self.dictionary = trie::Trie::new();
         let file = fs::read_to_string(dictionary_file_name);
         
         for line in file.expect("Unable to find dictionary").lines() {
@@ -243,7 +243,7 @@ mod tests {
 
         match suggestion {
             Ok(word) => return Some(word),
-            Err(v) => return None,
+            Err(_v) => return None,
         }
     }
 

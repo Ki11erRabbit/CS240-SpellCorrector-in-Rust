@@ -1,4 +1,4 @@
-mod Spell_Corrector;
+mod spell_corrector;
 
 use std::env;
 
@@ -15,7 +15,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let dictionary_name = &args[1];
     let input_word = &args[2];
-    let mut corrector = Spell_Corrector::SpellCorrector::new();
+    let mut corrector = spell_corrector::SpellCorrector::new();
 
     corrector.use_dictionary(dictionary_name.to_string());
     let suggestion = corrector.suggest_similar_word(input_word.to_string());
